@@ -1,103 +1,10 @@
 #include <Arduino.h>
 #include "control.h"
 #include "ManagedMotor.h"
+#include "Thruster.h"
+#include "hardware_config.h"
 
 // Simple serial control for UUV 
-
-//pin assignments
-const int DEPTH_THRUSTER1 = 2;
-const int DEPTH_THRUSTER2 = 3;
-const int RIGHT_THRUSTER = 4;
-const int LEFT_THRUSTER = 5;
-const int TILT_SERVO = 9;
-const int PAN_SERVO = 10;
-
-//other constants
-const long KEEPALIVE_INTERVAL = 500;
-const int MESSAGE_LENGTH = 5;
-const int BAUD_RATE = 9600;
-const int PWM_FREQ = 50;
-const int ESC_SWITCHING_DELAY = 500;
-
-
-//class definitions
-/*
-class ManagedMotor {
-  protected:
-    int current_value;  // -99 to 99
-    int target_value;   // -99 to 99
-    int pin_assignment;
-
-    void set_pwm_signal() {
-      float tgt_time = 1.5 + (current_value / 99.0 * 0.5); // scaled from 1.0 to 2.0 ms
-      float duty_time = 1000 / PWM_FREQ;
-      int pwm_signal = round(tgt_time / duty_time * 255); // scaled from 0 to 255
-      analogWrite(pin_assignment, pwm_signal);
-    }
-  
-  public:
-    ManagedMotor(int pin_number) {
-      pin_assignment = pin_number;
-    }
-
-    void set_target(int value) {
-      target_value = constrain(value, -99, 99);
-    }
-
-    virtual void update() {
-      if (current_value != target_value){ 
-        current_value = target_value;
-        set_pwm_signal();
-        return;
-      } 
-    }
-
-    void initialize() {
-      analogWriteFrequency(pin_assignment, PWM_FREQ);
-      current_value = 0;
-      set_pwm_signal();
-    }
-};
-*/
-
-class Thruster : public ManagedMotor {
-  private:
-    unsigned long timer_start = 0;
-
-  public:
-    Thruster(int pin_number, int pwm_freq = 50)
-      : ManagedMotor(pin_number, pwm_freq)
-      {
-        // empty ctor... :(
-      }
-
-    void update() override {
-      if (current_value == target_value){ return; } // no action needed
-
-      if (timer_start != 0) { // timer was started - ESC should be in idle but may be used for smooth acceleration later
-        unsigned long now = millis();
-        if (now - timer_start > ESC_SWITCHING_DELAY) {  // timer complete
-          timer_start = 0;
-          current_value = target_value;
-          set_pwm_signal();
-          return;
-        } else {
-          return;
-        }
-      }
-
-      if ((target_value < 0 && current_value > 0) || (target_value > 0 && current_value < 0)) {  // idle ESC to prevent damage
-        current_value = 0;
-        timer_start = millis();
-        set_pwm_signal();
-        return;
-      }
-
-      current_value = target_value;
-      set_pwm_signal();
-      return;
-    }
-};
 
 class MotorController {
 
