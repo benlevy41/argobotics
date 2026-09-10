@@ -16,6 +16,13 @@ MotorController::MotorController()
 {
 }
 
+int MotorController::get_thruster_state(int ThrusterId) {
+    if (ThrusterId < 0 || ThrusterId >= static_cast<int>(ThrusterId::COUNT)) {
+        return 0; // or handle error
+    }
+    return thrusters[ThrusterId].get_pwm();
+}
+
 void MotorController::set_up() {
     for (Thruster &thruster : thrusters) {
         thruster.initialize();
@@ -23,6 +30,8 @@ void MotorController::set_up() {
     for (ManagedMotor &servo : servos) {
         servo.initialize();
     }
+
+    delay(3000); // ESC arming delay
 }
 
 void MotorController::set_state(MotorState incoming) {
@@ -34,8 +43,6 @@ void MotorController::set_state(MotorState incoming) {
 
     servos[static_cast<int>(ServoId::PAN)].set_target(state.cam_pan);
     servos[static_cast<int>(ServoId::TILT)].set_target(state.cam_tilt);
-
-    delay(3000); // ESC arming delay
 }
 
 void MotorController::update() {

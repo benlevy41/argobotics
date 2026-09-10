@@ -2,85 +2,12 @@
 #include "control.h"
 #include "ManagedMotor.h"
 #include "Thruster.h"
+#include "MotorController.h"
 #include "hardware_config.h"
 
 // Simple serial control for UUV 
 
-class MotorController {
-
-  private: 
-    enum class ThrusterId {
-      LEFT,
-      RIGHT,
-      DEPTH1,
-      DEPTH2,
-      COUNT
-    };
-
-    enum class ServoId {
-      PAN,
-      TILT,
-      COUNT
-    };
-
-    MotorState target; // may not need these any more
-    MotorState current;
-    Thruster thrusters[static_cast<int>(ThrusterId::COUNT)];
-    ManagedMotor servos[static_cast<int>(ServoId::COUNT)];
-
-  public:
-
-    MotorController()
-
-      : thrusters{
-        Thruster(LEFT_THRUSTER),
-        Thruster(RIGHT_THRUSTER),
-        Thruster(DEPTH_THRUSTER1),
-        Thruster(DEPTH_THRUSTER2)
-      },
-      servos{
-        ManagedMotor(PAN_SERVO),
-        ManagedMotor(TILT_SERVO)
-      }
-
-      {
-        // empty ctor... :(
-      }
-
-    void set_up() {
-      // set up each thruster and servo - need to call initialize for all motors
-      for (Thruster &thruster : thrusters) {
-        thruster.initialize();
-      }
-      for (ManagedMotor &servo : servos) {
-        servo.initialize();
-      }
-    }
-    
-    void set_state(MotorState state) {
-      target = state;
-      thrusters[static_cast<int>(ThrusterId::LEFT)].set_target(state.l_thrust);
-      thrusters[static_cast<int>(ThrusterId::RIGHT)].set_target(state.r_thrust);
-      thrusters[static_cast<int>(ThrusterId::DEPTH1)].set_target(state.depth1);
-      thrusters[static_cast<int>(ThrusterId::DEPTH2)].set_target(state.depth2);
-      servos[static_cast<int>(ServoId::PAN)].set_target(state.cam_pan);
-      servos[static_cast<int>(ServoId::TILT)].set_target(state.cam_tilt);
-      delay(3000); // ESC arming delay
-    }
-
-    void update() {
-      for (Thruster &thruster : thrusters) {
-        thruster.update();
-      }
-
-      for (ManagedMotor &servo : servos) {
-        servo.update();
-      }
-    }
-};
-
-//helper functions
-
+// helper function to read a message from serial input
 char *read_serial() {
   static char msg[MESSAGE_LENGTH];
   static int msg_pos = 0;

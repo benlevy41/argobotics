@@ -29,6 +29,7 @@ private:
 public:
     MotorController();
 
+    int get_thruster_state(int ThrusterId);
     void set_up();
     void set_state(MotorState state);
     void update();
