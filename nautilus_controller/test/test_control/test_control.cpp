@@ -1,5 +1,8 @@
 #include <unity.h>
+#include <cstring>
 #include "control.h"
+#include "hardware_config.h"
+
 
 void setUp(void) {
     
@@ -132,6 +135,75 @@ void test_calc_motor_state_constrained(void) {
     TEST_ASSERT_EQUAL_INT(-99, motor.cam_tilt);
 }
 
+void test_read_serial_msg(void) {
+    char msg[MESSAGE_LENGTH];
+    const char *input = "+70,-10,+00,+10,-55\n";
+    bool message_complete = false;
+
+    for (size_t i = 0; i < strlen(input); i++) {
+        message_complete = read_serial_msg(input[i], msg);
+        if (message_complete) {
+            break;
+        }
+    }
+
+    TEST_ASSERT_TRUE(message_complete);
+    TEST_ASSERT_EQUAL_STRING("+70,-10,+00,+10,-55", msg);
+}
+
+void test_read_serial_incomplete_msg(void) {
+    char msg[MESSAGE_LENGTH];
+    const char *input1 = "+70,-10,"; 
+    bool message_complete = false;
+
+    for (size_t i = 0; i < strlen(input1); i++) {
+        message_complete = read_serial_msg(input1[i], msg);
+        if (message_complete) {
+            break;
+        }
+    }
+
+    TEST_ASSERT_FALSE(message_complete);
+
+    const char *input2 = "+00,+10,-55\n";
+    for (size_t i = 0; i < strlen(input2); i++) {
+        message_complete = read_serial_msg(input2[i], msg);
+        if (message_complete) {
+            break;
+        }
+    }
+
+    TEST_ASSERT_TRUE(message_complete);
+    TEST_ASSERT_EQUAL_STRING("+70,-10,+00,+10,-55", msg);
+}
+
+void test_read_serial_msg_overflow(void) {
+    char msg[MESSAGE_LENGTH];
+    const char *input = "+70,-10,+00,+10,-55,+99\n"; // 6 values, should overflow
+    bool message_complete = false;
+
+    for (size_t i = 0; i < strlen(input); i++) {
+        message_complete = read_serial_msg(input[i], msg);
+        if (message_complete) {
+            break;
+        }
+    }
+
+    TEST_ASSERT_FALSE(message_complete);
+
+    char input2[MESSAGE_LENGTH] = "+75,+13,-20,+00,-15\n";
+
+    for (size_t i = 0; i < strlen(input2); i++) {
+        message_complete = read_serial_msg(input2[i], msg);
+        if (message_complete) {
+            break;
+        }
+    }
+
+    TEST_ASSERT_TRUE(message_complete);
+    TEST_ASSERT_EQUAL_STRING("+75,+13,-20,+00,-15", msg);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -144,6 +216,9 @@ int main(void)
     RUN_TEST(test_motor_state_reverse_left);
     RUN_TEST(test_motor_state_reverse_right);
     RUN_TEST(test_calc_motor_state_constrained);
+    RUN_TEST(test_read_serial_msg);
+    RUN_TEST(test_read_serial_incomplete_msg);
+    RUN_TEST(test_read_serial_msg_overflow);
 
     UNITY_END();
 }

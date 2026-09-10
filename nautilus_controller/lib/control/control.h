@@ -20,6 +20,8 @@ struct MotorState{
 
 bool parse_ctrl(char *msg, ControlState &state);
 
+bool read_serial_msg(char c, char* msg);
+
 MotorState calc_motor_state(ControlState ctrl);
 
 #endif

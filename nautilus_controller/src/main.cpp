@@ -8,6 +8,7 @@
 // Simple serial control for UUV 
 
 // helper function to read a message from serial input
+/*
 char *read_serial() {
   static char msg[MESSAGE_LENGTH];
   static int msg_pos = 0;
@@ -22,6 +23,20 @@ char *read_serial() {
     else if (msg_pos < MESSAGE_LENGTH - 1) {
       msg[msg_pos] = c;
       msg_pos++;
+    }
+  }
+  return NULL;
+}
+  */
+
+char *read_serial(){
+  static char msg[MESSAGE_LENGTH];
+  bool message_complete = false;
+  while (Serial.available()) {
+    char c = Serial.read();
+    message_complete = read_serial_msg(c, msg);
+    if (message_complete) {
+      return msg;
     }
   }
   return NULL;
@@ -52,8 +67,8 @@ void loop() {
 
       last_msg_time = current_time;
     }
-    
   }
+  
   else if (current_time - last_msg_time > KEEPALIVE_INTERVAL) {
     motor_control.set_state(MotorState{});
   }

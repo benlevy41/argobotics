@@ -1,6 +1,7 @@
 #include "control.h"
 #include <Arduino.h>
 #include <stdlib.h>
+#include "hardware_config.h"
 
 bool parse_ctrl(char *msg, ControlState &state) {
     int state_arr[5];
@@ -51,4 +52,36 @@ MotorState calc_motor_state(ControlState ctrl) {
     motor.cam_tilt = constrain(motor.cam_tilt, -99, 99);
 
     return motor;
+}
+
+bool read_serial_msg(char c, char* msg) {
+    static char buffer[MESSAGE_LENGTH];
+    static int index = 0;
+    static bool discarding = false;
+
+    if (discarding) { 
+        if (c == '\n') {
+            discarding = false;
+            index = 0;
+        }
+        return false;
+    } 
+    
+    if (c == '\n') {
+        buffer[index] = '\0'; // null terminator for c string
+        index = 0;
+        strcpy(msg, buffer);
+        return true; // message complete
+    } 
+    
+    if (index >= MESSAGE_LENGTH - 1) { 
+        index = 0;
+        buffer[0] = '\0';
+        discarding = true;
+        return false;
+    }
+
+    buffer[index] = c;
+    index++;
+    return false; // message not complete
 }

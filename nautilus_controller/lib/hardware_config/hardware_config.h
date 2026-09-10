@@ -10,7 +10,7 @@ const int TILT_SERVO = 9;
 const int PAN_SERVO = 10;
 
 //other constants
-const int MESSAGE_LENGTH = 5;
+const int MESSAGE_LENGTH = 20;
 const long KEEPALIVE_INTERVAL = 500;
 const int BAUD_RATE = 9600;
 const int PWM_FREQ = 50;
