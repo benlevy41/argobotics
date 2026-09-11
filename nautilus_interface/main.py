@@ -1,16 +1,18 @@
 import asyncio
-from utils import ControlState, UartManager
+from utils import ControlState, UartManager, PacketBuilder
 from controller import Controller
 
 
 async def main():
-    controller = Controller
     state = ControlState()
-    uart = UartManager(control_state=state, port='/dev/ttyACM0', baudrate=9600)
+    controller = Controller(state)
+    uart = UartManager(control_state=state, port='COM4', baudrate=9600)
 
     try: 
+        print("Welcome to the ROV controller interface!")
+
         await asyncio.gather(
-            uart.run()
+            uart.run(),
             controller.run()
         )
 
@@ -19,4 +21,4 @@ async def main():
         state = ControlState()  # Reset state to neutral
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

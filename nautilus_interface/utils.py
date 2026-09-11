@@ -38,10 +38,25 @@ class UartManager:
         self.connected = False
 
     async def _connect(self):
-        self.ser = serial.Serial(self.port, self.baudrate, timeout=0.1, write_timeout=0.1)
-        if not self.ser.is_open:
-            await asyncio.get_event_loop().run_in_executor(None, self.ser.open)
-        self.connected = True
+        try:
+            self.ser = serial.Serial(
+                self.port,
+                self.baudrate,
+                timeout=0.1,
+                write_timeout=0.1
+            )
+
+            self.connected = self.ser.is_open
+
+            if self.connected:
+                print("Serial port opened")
+                await asyncio.sleep(1)
+                print("ready to transmit")
+
+        except serial.SerialException as e:
+            print(f"UART connection failed: {e}")
+            self.ser = None
+            self.connected = False
 
     def send_command(self, cmd):
         self.ser.write(cmd.encode('utf-8'))
@@ -52,13 +67,15 @@ class UartManager:
         return None
 
     async def run(self):
-        self.connect()
+        print("UART module starting...")
+        await self._connect()
+        print(f"UART connection status connected: {self.connected}")
         while True:
-            if self.ser is None or not self.ser.is_open:
+            if (self.ser is None) or (not self.ser.is_open):
                 self.connected = False
                 print("Connection lost. Attempting to reconnect...")
-                connected = await self.connect()
-                if not connected:
+                await self._connect()
+                if not self.connected:
                     await asyncio.sleep(1)
                     continue
 

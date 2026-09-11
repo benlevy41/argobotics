@@ -15,5 +15,5 @@ const long KEEPALIVE_INTERVAL = 500;
 const int BAUD_RATE = 9600;
 const int PWM_FREQ = 50;
 const int ESC_SWITCHING_DELAY = 500;
-const bool DEBUG_MODE = true;
+const bool DEBUG_MODE = false;
 #endif // HARDWARE_CONFIG_H

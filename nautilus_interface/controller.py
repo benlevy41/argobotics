@@ -39,6 +39,7 @@ class Controller:
         return errors
 
     async def run(self):
+        print("control module starting...")
         loop = asyncio.get_running_loop()
 
         while True:
