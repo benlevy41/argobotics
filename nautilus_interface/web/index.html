@@ -224,12 +224,17 @@
         <!-- Video -->
         <section class="video-panel">
 
-            <!-- Replace this with your video element -->
-            <video id="video" autoplay muted playsinline></video>
+            <video
+                id="video"
+                autoplay
+                muted
+                playsinline
+                aria-label="ROV camera feed">
+            </video>
 
             <!-- Shown until video is connected -->
-            <div id="videoPlaceholder" class="video-placeholder">
-                NO VIDEO
+            <div id="videoPlaceholder" class="video-placeholder" role="status">
+                CONNECTING VIDEO
             </div>
 
         </section>

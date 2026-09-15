@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nautilus Controller</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Nautilus Controller</h1>
+
+    <div id="connection">
+        WebSocket: <span id="connStatus">Disconnected</span>
+    </div>
+
+    <div class="controls">
+        <button data-key="w">Throttle +</button>
+        <button data-key="s">Throttle −</button>
+
+        <button data-key="a">Yaw Left</button>
+        <button data-key="d">Yaw Right</button>
+
+        <button data-key="e">Heave Up</button>
+        <button data-key="q">Heave Down</button>
+
+        <button data-key="[">Pan Left</button>
+        <button data-key="]">Pan Right</button>
+
+        <button data-key="-">Tilt Down</button>
+        <button data-key="=">Tilt Up</button>
+
+        <button data-key=" ">STOP</button>
+        <button data-key="0">Camera Zero</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

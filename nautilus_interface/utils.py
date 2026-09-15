@@ -36,8 +36,12 @@ class UartManager:
         self.control_state = control_state
         self.interpreter = PacketBuilder()
         self.connected = False
+        self._closed = False
 
     async def _connect(self):
+        if self._closed:
+            return
+
         try:
             self.ser = serial.Serial(
                 self.port,
@@ -59,29 +63,58 @@ class UartManager:
             self.connected = False
 
     def send_command(self, cmd):
+        if not self.ser or not self.ser.is_open:
+            return
         self.ser.write(cmd.encode('utf-8'))
 
     def receive_message(self):
-        if self.ser.in_waiting:
+        if self.ser and self.ser.is_open and self.ser.in_waiting:
             return self.ser.readline().decode().strip()
         return None
 
-    async def run(self):
+    async def close(self):
+        self._closed = True
+        self.connected = False
+        if self.ser:
+            self.ser.close()
+            self.ser = None
+
+    async def _wait_or_stop(self, stop_event, timeout):
+        if stop_event is None:
+            await asyncio.sleep(timeout)
+            return False
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout)
+        except asyncio.TimeoutError:
+            return False
+        return True
+
+    async def run(self, stop_event=None):
         print("UART module starting...")
         await self._connect()
         print(f"UART connection status connected: {self.connected}")
-        while True:
+        while not self._closed and not (stop_event and stop_event.is_set()):
             if (self.ser is None) or (not self.ser.is_open):
                 self.connected = False
                 print("Connection lost. Attempting to reconnect...")
                 await self._connect()
                 if not self.connected:
-                    await asyncio.sleep(1)
+                    if await self._wait_or_stop(stop_event, 1):
+                        break
                     continue
 
             else:
-                self.send_command(self.interpreter.packetize(self.control_state))
-                message = self.receive_message()
-                if message:
-                    print(f"Received: {message}")
-                await asyncio.sleep(0.02)  
+                try:
+                    self.send_command(self.interpreter.packetize(self.control_state))
+                    message = self.receive_message()
+                    if message:
+                        print(f"Received: {message}")
+                except (serial.SerialException, OSError) as error:
+                    print(f"UART connection lost: {error}")
+                    await self.close()
+                    self._closed = False
+                if await self._wait_or_stop(stop_event, 0.02):
+                    break
+
+        await self.close()

@@ -10,8 +10,8 @@ cleanup() {
 trap cleanup EXIT
 
 #start python scripts
-python3 -m http.server 8000 > http.log 2>&1 &
-python3 websocket_server.py > ws.log 2>&1 &
+#python3 -m http.server 8000 > http.log 2>&1 &
+#python3 websocket_server.py > ws.log 2>&1 &
 
 #start rpicam-vid raw video stream to localhost port 8555
 rpicam-vid -t 0 --bitrate 2000000 --profile baseline --width 1920 --height 1080 --inline --listen -o tcp://127.0.0.1:8555 &

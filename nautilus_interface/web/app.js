@@ -1,4 +1,10 @@
-const CONTROL_RATE = 50; //ms
+const CONTROL_RATE = 50;
+const WEBRTC_PORT = 8889;
+const VIDEO_PATH = "cam";
+const VIDEO_RETRY_DELAY = 2000;
+const mediaProtocol = window.location.protocol === "https:" ? "https" : "http";
+let videoRetryTimer = null;
+let activePeerConnection = null;
 
 class Key {
     constructor(key){
@@ -180,22 +186,34 @@ class KeyController {
     }
 }
 
-const socket = new WebSocket(`ws://${window.location.hostname}:8765`);
-const connStatus = document.getElementById("connStatus");
+const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+const socket = new WebSocket(`${protocol}://${window.location.hostname}:8765`);
+const wsStatus = document.getElementById("wsStatus");
+const wsStatusDot = document.getElementById("wsStatusDot");
+const video = document.getElementById("video");
+const videoPlaceholder = document.getElementById("videoPlaceholder");
+const videoStatus = document.getElementById("videoStatus");
+const videoStatusDot = document.getElementById("videoStatusDot");
 const control = new KeyController();
+
+function updateConnectionStatus(element, dot, connected, text) {
+    element.textContent = text;
+    dot.classList.toggle("connected", connected);
+}
 
 
 socket.addEventListener("open", () => {
-    connStatus.textContent = "Connected";
+    updateConnectionStatus(wsStatus, wsStatusDot, true, "Connected");
     console.log("WebSocket connected");
 });
 
 socket.addEventListener("close", () => {
-    connStatus.textContent = "Disconnected";
+    updateConnectionStatus(wsStatus, wsStatusDot, false, "Disconnected");
     console.log("WebSocket disconnected");
 });
 
 socket.addEventListener("error", (error) => {
+    updateConnectionStatus(wsStatus, wsStatusDot, false, "Error");
     console.error("WebSocket error:", error);
 });
 
@@ -212,19 +230,17 @@ function updateStateUi() {
 }
 
 function updateSocketUi(is_conn){
-    let text = ''
-    if (is_conn){
-        text = "Connected";
-    } else {
-       text = "Disconnected";
-    }
-    document.getElementById("wsStatus").textContent = text;
+    updateConnectionStatus(
+        wsStatus,
+        wsStatusDot,
+        is_conn,
+        is_conn ? "Connected" : "Disconnected"
+    );
 }
 
 function sendCommand(command) {
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(command);        
-        console.log("sent:", command);
         updateSocketUi(true);
         updateStateUi();
     } else {
@@ -240,8 +256,7 @@ document.querySelectorAll("[data-key]").forEach(button => { //TODO: this should 
 });
 
 setInterval(() => {
-    const state  = control.read_state();
-    sendCommand(sendCommand(state));
+    sendCommand(control.read_state());
 }, CONTROL_RATE);
 
 document.addEventListener("keydown", (event) => {
@@ -253,3 +268,108 @@ document.addEventListener("keyup", (event) => {
     event.preventDefault();
     control.handleKeyUp(event.key.toLowerCase());
 });
+
+function updateVideoUi(connected, text) {
+    updateConnectionStatus(videoStatus, videoStatusDot, connected, text);
+    videoPlaceholder.hidden = connected;
+}
+
+function retryVideoConnection() {
+    if (videoRetryTimer !== null) {
+        return;
+    }
+
+    videoRetryTimer = window.setTimeout(() => {
+        videoRetryTimer = null;
+        connectVideo();
+    }, VIDEO_RETRY_DELAY);
+}
+
+function waitForIceConnection(peerConnection) {
+    return new Promise((resolve, reject) => {
+        const checkState = () => {
+            if (peerConnection.iceConnectionState === "connected" ||
+                peerConnection.iceConnectionState === "completed") {
+                resolve();
+            } else if (peerConnection.iceConnectionState === "failed" ||
+                       peerConnection.iceConnectionState === "closed") {
+                reject(new Error(`ICE connection ${peerConnection.iceConnectionState}`));
+            }
+        };
+
+        peerConnection.addEventListener("iceconnectionstatechange", checkState);
+        checkState();
+    });
+}
+
+async function connectVideo() {
+    updateVideoUi(false, "Connecting");
+    if (activePeerConnection) {
+        activePeerConnection.close();
+    }
+    const peerConnection = new RTCPeerConnection();
+    activePeerConnection = peerConnection;
+    peerConnection.addTransceiver("video", { direction: "recvonly" });
+
+    peerConnection.addEventListener("track", (event) => {
+        if (event.streams[0]) {
+            video.srcObject = event.streams[0];
+        }
+    });
+
+    peerConnection.addEventListener("connectionstatechange", () => {
+        if (["failed", "disconnected", "closed"].includes(peerConnection.connectionState)) {
+            updateVideoUi(false, "Disconnected");
+            retryVideoConnection();
+        }
+    });
+
+    try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        await waitForIceGathering(peerConnection);
+
+        const response = await fetch(
+            `${mediaProtocol}://${window.location.hostname}:${WEBRTC_PORT}/${VIDEO_PATH}/whep`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/sdp" },
+                body: peerConnection.localDescription.sdp
+            }
+        );
+        if (!response.ok) {
+            throw new Error(`WebRTC request failed: ${response.status}`);
+        }
+
+        await peerConnection.setRemoteDescription({
+            type: "answer",
+            sdp: await response.text()
+        });
+        await waitForIceConnection(peerConnection);
+        await video.play();
+        updateVideoUi(true, "Connected");
+    } catch (error) {
+        peerConnection.close();
+        updateVideoUi(false, "Error");
+        console.error("Video connection failed:", error);
+        retryVideoConnection();
+    }
+}
+
+function waitForIceGathering(peerConnection) {
+    if (peerConnection.iceGatheringState === "complete") {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+        peerConnection.addEventListener("icegatheringstatechange", () => {
+            if (peerConnection.iceGatheringState === "complete") {
+                resolve();
+            }
+        });
+    });
+}
+
+video.addEventListener("playing", () => updateVideoUi(true, "Connected"));
+video.addEventListener("error", () => updateVideoUi(false, "Error"));
+connectVideo();
