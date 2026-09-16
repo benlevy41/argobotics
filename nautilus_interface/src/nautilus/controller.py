@@ -1,4 +1,4 @@
-from utils import ControlState
+from nautilus_interface.src.nautilus.utils import ControlState
 import asyncio
 
 

@@ -2,9 +2,9 @@ import asyncio
 import argparse
 import os
 import signal
-from utils import ControlState, UartManager
-from controller import Controller
-from web_server import WebSocket, WebServer
+from nautilus_interface.src.nautilus.utils import ControlState, UartManager
+from nautilus_interface.src.nautilus.controller import Controller
+from nautilus_interface.src.nautilus.web_server import WebSocket, WebServer
 
 
 async def main():

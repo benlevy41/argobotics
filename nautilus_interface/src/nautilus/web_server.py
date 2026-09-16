@@ -2,7 +2,7 @@ import asyncio
 import websockets
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from utils import ControlState
+from nautilus_interface.src.nautilus.utils import ControlState
 
 class WebServer:
     def __init__(self, ip:str = "0.0.0.0", port:int = 8000):
