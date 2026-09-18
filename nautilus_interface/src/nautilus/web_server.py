@@ -2,7 +2,8 @@ import asyncio
 import websockets
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from nautilus_interface.src.nautilus.utils import ControlState
+from nautilus.utils import ControlState
+from nautilus.controller import Controller
 
 class WebServer:
     def __init__(self, ip:str = "0.0.0.0", port:int = 8000):
@@ -24,17 +25,10 @@ class WebServer:
             self.server.serve_forever
         )
 
-class WebSocket:
-    COMMAND_MAP = {
-            "t": "throttle",
-            "y": "yaw",
-            "h": "heave",
-            "p": "pan",
-            "l": "tilt",
-        }
-    
+class WebSocket(Controller):
+
     def __init__(self, control_state:ControlState, ip:str="0.0.0.0", port:int=8765):
-        self.control_state = control_state
+        self.super().__init__(control_state)
         self.ip = ip
         self.port = port
         self.msg_queue = asyncio.Queue()
@@ -46,28 +40,9 @@ class WebSocket:
             self.process_msg(message)
 
     def process_msg(self, command:str):
-        errors = []
-        
-        for cmd in command.split(","):
-            cmd = cmd.strip()
+        errors = super().process_command(command) # eventually we may handle other types of messages
 
-            try:
-                token, value = cmd.split(":")
-                attribute = self.COMMAND_MAP[token.strip()]
-                value = int(value)
-
-                if not -99 <= value <= 99:
-                    raise ValueError("value must be between -99 and 99")
-
-                setattr(self.control_state, attribute, value)
-
-            except ValueError:
-                errors.append(f"Invalid command: {cmd}")
-
-            except KeyError:
-                errors.append(f"Unknown command: {cmd}")
-
-    async def send_response(self, msg:str):
+    async def send_response(self, msg:str): # future implementation for telemetry, etc
         pass
 
     async def run(self):
