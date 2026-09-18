@@ -1,0 +1,6 @@
+# Runtime dependencies for the Nautilus interface
+# Standard-library modules such as asyncio, http.server, and dataclasses are not listed here.
+pyserial>=3.5
+websockets>=12.0
+pytest>=9.1.1
+pytest-asyncio>=1.4.0

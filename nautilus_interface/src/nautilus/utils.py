@@ -65,7 +65,7 @@ class UartManager:
     def send_command(self, cmd):
         if not self.ser or not self.ser.is_open:
             return
-        self.ser.write(cmd.encode('utf-8'))
+        self.ser.write(str(cmd).encode('utf-8'))
 
     def receive_message(self):
         if self.ser and self.ser.is_open and self.ser.in_waiting:
@@ -79,28 +79,34 @@ class UartManager:
             self.ser.close()
             self.ser = None
 
-    async def _wait_or_stop(self, stop_event, timeout):
+    async def _wait_or_stop(self, stop_event:asyncio.Event, timeout): # this function does two  separate things which makes the purpose unclear - suggest we separate the wait logic from the stop logic
         if stop_event is None:
             await asyncio.sleep(timeout)
             return False
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout)
+
         except asyncio.TimeoutError:
             return False
+        
         return True
 
-    async def run(self, stop_event=None):
+    async def run(self, stop_event:asyncio.Event=None):
+        if not ((type(stop_event) == asyncio.locks.Event) or (stop_event is None)):
+            raise ValueError("stop_event must be asyncio Event or None!")
+
         print("UART module starting...")
         await self._connect()
         print(f"UART connection status connected: {self.connected}")
-        while not self._closed and not (stop_event and stop_event.is_set()):
+        
+        while not self._closed and not (stop_event and stop_event.is_set()): 
             if (self.ser is None) or (not self.ser.is_open):
                 self.connected = False
                 print("Connection lost. Attempting to reconnect...")
                 await self._connect()
                 if not self.connected:
-                    if await self._wait_or_stop(stop_event, 1):
+                    if await self._wait_or_stop(stop_event, 1): # check for stop event, then wait and continue
                         break
                     continue
 
@@ -110,10 +116,24 @@ class UartManager:
                     message = self.receive_message()
                     if message:
                         print(f"Received: {message}")
+
                 except (serial.SerialException, OSError) as error:
                     print(f"UART connection lost: {error}")
                     await self.close()
                     self._closed = False
+
+                except ValueError as e:
+                    print(f"Control state contained invalid values: [{self.control_state.throttle}, {self.control_state.heave}, {self.control_state.yaw}, {self.control_state.pan}, {self.control_state.tilt}]")
+                    print(f"Error: {e}")
+                    await self.close()
+                    self._closed = False
+
+                except TypeError as e:
+                    print(f"Control state value was wrong type: [{type(self.control_state.throttle)}, {type(self.control_state.heave)}, {type(self.control_state.yaw)}, {type(self.control_state.pan)}, {type(self.control_state.tilt)}]")
+                    print(f"Error: {e}")
+                    await self.close()
+                    self._closed = False
+                
                 if await self._wait_or_stop(stop_event, 0.02):
                     break
 

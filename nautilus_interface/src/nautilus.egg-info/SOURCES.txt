@@ -1,0 +1,11 @@
+pyproject.toml
+src/nautilus/__init__.py
+src/nautilus/controller.py
+src/nautilus/main.py
+src/nautilus/test.py
+src/nautilus/utils.py
+src/nautilus/web_server.py
+src/nautilus.egg-info/PKG-INFO
+src/nautilus.egg-info/SOURCES.txt
+src/nautilus.egg-info/dependency_links.txt
+src/nautilus.egg-info/top_level.txt
